@@ -37,3 +37,45 @@ export interface ReservationResponse {
   time: string;
   status: string;
 }
+
+export interface Order {
+  id: string;
+  reservationId: string;
+  tableNumber: number;
+  items: OrderItem[];
+  status: 'PENDING' | 'PREPARING' | 'READY' | 'SERVED' | 'CANCELLED' | 'PAID' | 'COMPLETED';
+  total: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrderItem {
+  id: string;
+  name: string;
+  quantity: number;
+  price: number;
+  specialRequests?: string;
+}
+
+export interface MenuItem {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  price: number;
+  image_url: string;
+  available: boolean;
+  preparationTime: number;
+}
+
+export interface Payment {
+  id: string;
+  reservationId: string;
+  amount: number;
+  currency: string;
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
+  paymentMethod: 'MPESA' | 'CARD' | 'CASH';
+  transactionReference?: string;
+  paidAt?: string;
+  createdAt: string;
+}

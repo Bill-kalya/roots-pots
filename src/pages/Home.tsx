@@ -22,7 +22,7 @@ export const Home: React.FC = () => {
               🌿 Where every table tells a story
             </p>
             <p className="text-gray-600 mb-8">
-              Choose your perfect spot in our garden restaurant
+              Reserve your favorite table, pre-order delicious meals, and skip the waiting time.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -45,7 +45,7 @@ export const Home: React.FC = () => {
       
       {/* Features */}
       <div className="max-w-6xl mx-auto px-4 py-16">
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-4 gap-8">
           <div className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg">
             <div className="text-4xl mb-3">🗺️</div>
             <h3 className="font-bold text-roots-green">Interactive Floor Plan</h3>
@@ -53,13 +53,18 @@ export const Home: React.FC = () => {
           </div>
           <div className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg">
             <div className="text-4xl mb-3">🕒</div>
-            <h3 className="font-bold text-roots-green">Real-time Availability</h3>
-            <p className="text-gray-600 text-sm">Live updates show which tables are free right now</p>
+            <h3 className="font-bold text-roots-green">Live Table Availability</h3>
+            <p className="text-gray-600 text-sm">Real-time updates show which tables are free right now</p>
           </div>
           <div className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg">
-            <div className="text-4xl mb-3">📍</div>
-            <h3 className="font-bold text-roots-green">Easy Navigation</h3>
-            <p className="text-gray-600 text-sm">Get directions to Roots & Pots with one click</p>
+            <div className="text-4xl mb-3">🍽️</div>
+            <h3 className="font-bold text-roots-green">Pre-Order Your Meal</h3>
+            <p className="text-gray-600 text-sm">Reserve your table and order your meals before arriving</p>
+          </div>
+          <div className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg">
+            <div className="text-4xl mb-3">💳</div>
+            <h3 className="font-bold text-roots-green">Secure Online Payment</h3>
+            <p className="text-gray-600 text-sm">Pay safely with M-Pesa, card, or cash at arrival</p>
           </div>
         </div>
       </div>

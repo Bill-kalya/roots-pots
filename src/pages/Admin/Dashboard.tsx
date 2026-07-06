@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
+import { ordersApi } from '../../api/orders';
 import { GlassmorphismCard } from '../../components/common/GlassmorphismCard';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
@@ -14,10 +15,28 @@ interface Reservation {
   status: string;
 }
 
+interface Order {
+  id: string;
+  reservationId: string;
+  tableNumber: number;
+  items: OrderItem[];
+  status: 'PENDING' | 'PREPARING' | 'READY' | 'SERVED' | 'CANCELLED' | 'PAID' | 'COMPLETED';
+  total: number;
+  createdAt: string;
+}
+
+interface OrderItem {
+  id: string;
+  name: string;
+  quantity: number;
+  price: number;
+}
+
 export const AdminDashboard: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split('T')[0]
   );
+  const [activeTab, setActiveTab] = useState<'reservations' | 'orders'>('reservations');
 
   const { data: reservations, isLoading, refetch } = useQuery({
     queryKey: ['admin-reservations', selectedDate],
@@ -26,6 +45,13 @@ export const AdminDashboard: React.FC = () => {
         params: { date: selectedDate }
       });
       return response.data;
+    },
+  });
+
+  const { data: orders, isLoading: ordersLoading, refetch: refetchOrders } = useQuery({
+    queryKey: ['admin-orders', selectedDate],
+    queryFn: async () => {
+      return ordersApi.getByDate(selectedDate);
     },
   });
 
@@ -48,7 +74,16 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  const handleOrderStatusChange = async (orderId: string, newStatus: string) => {
+    try {
+      await ordersApi.updateStatus(orderId, newStatus);
+      refetchOrders();
+    } catch (error) {
+      console.error('Error updating order:', error);
+    }
+  };
+
+  if (isLoading || ordersLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <LoadingSpinner size="lg" />
@@ -74,6 +109,30 @@ export const AdminDashboard: React.FC = () => {
               Export
             </button>
           </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-2 mb-8">
+          <button
+            className={`px-6 py-3 rounded-lg transition ${
+              activeTab === 'reservations'
+                ? 'bg-roots-green text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+            onClick={() => setActiveTab('reservations')}
+          >
+            Reservations
+          </button>
+          <button
+            className={`px-6 py-3 rounded-lg transition ${
+              activeTab === 'orders'
+                ? 'bg-roots-green text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+            onClick={() => setActiveTab('orders')}
+          >
+            Orders ({orders?.length || 0})
+          </button>
         </div>
 
         {/* Stats Grid */}
@@ -107,55 +166,129 @@ export const AdminDashboard: React.FC = () => {
           </GlassmorphismCard>
         </div>
 
-        {/* Reservations Table */}
-        <GlassmorphismCard className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Reservations</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Table</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Customer</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Phone</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Time</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reservations?.map((res: Reservation) => (
-                  <tr key={res.id} className="border-b border-gray-100 hover:bg-gray-50/50">
-                    <td className="py-3 px-4 font-medium">Table {res.tableNumber}</td>
-                    <td className="py-3 px-4">{res.customerName}</td>
-                    <td className="py-3 px-4">{res.customerPhone}</td>
-                    <td className="py-3 px-4">{res.time}</td>
-                    <td className="py-3 px-4">
-                      <span className={`
-                        px-3 py-1 rounded-full text-xs font-medium
-                        ${res.status === 'CONFIRMED' ? 'bg-green-100 text-green-700' : ''}
-                        ${res.status === 'CANCELLED' ? 'bg-red-100 text-red-700' : ''}
-                        ${res.status === 'COMPLETED' ? 'bg-blue-100 text-blue-700' : ''}
-                      `}>
-                        {res.status}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <select
-                        className="text-sm border border-gray-300 rounded px-2 py-1"
-                        value={res.status}
-                        onChange={(e) => handleStatusChange(res.id, e.target.value)}
-                      >
-                        <option value="CONFIRMED">Confirmed</option>
-                        <option value="COMPLETED">Completed</option>
-                        <option value="CANCELLED">Cancelled</option>
-                      </select>
-                    </td>
+        {/* Reservations Tab */}
+        {activeTab === 'reservations' && (
+          <GlassmorphismCard className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Reservations</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Table</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Customer</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Phone</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Time</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </GlassmorphismCard>
+                </thead>
+                <tbody>
+                  {reservations?.map((res: Reservation) => (
+                    <tr key={res.id} className="border-b border-gray-100 hover:bg-gray-50/50">
+                      <td className="py-3 px-4 font-medium">Table {res.tableNumber}</td>
+                      <td className="py-3 px-4">{res.customerName}</td>
+                      <td className="py-3 px-4">{res.customerPhone}</td>
+                      <td className="py-3 px-4">{res.time}</td>
+                      <td className="py-3 px-4">
+                        <span className={`
+                          px-3 py-1 rounded-full text-xs font-medium
+                          ${res.status === 'CONFIRMED' ? 'bg-green-100 text-green-700' : ''}
+                          ${res.status === 'CANCELLED' ? 'bg-red-100 text-red-700' : ''}
+                          ${res.status === 'COMPLETED' ? 'bg-blue-100 text-blue-700' : ''}
+                        `}>
+                          {res.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <select
+                          className="text-sm border border-gray-300 rounded px-2 py-1"
+                          value={res.status}
+                          onChange={(e) => handleStatusChange(res.id, e.target.value)}
+                        >
+                          <option value="CONFIRMED">Confirmed</option>
+                          <option value="COMPLETED">Completed</option>
+                          <option value="CANCELLED">Cancelled</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </GlassmorphismCard>
+        )}
+
+        {/* Orders Tab */}
+        {activeTab === 'orders' && (
+          <GlassmorphismCard className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Orders</h2>
+            {orders && orders.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Table</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Items</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Total</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Time</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.map((order: Order) => (
+                      <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50/50">
+                        <td className="py-3 px-4 font-medium">Table {order.tableNumber}</td>
+                        <td className="py-3 px-4">
+                          <div className="text-sm">
+                            {order.items.map((item: OrderItem) => (
+                              <div key={item.id} className="text-gray-700">
+                                {item.quantity}x {item.name}
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 font-semibold">${order.total.toFixed(2)}</td>
+                        <td className="py-3 px-4">{new Date(order.createdAt).toLocaleTimeString()}</td>
+                        <td className="py-3 px-4">
+                          <span className={`
+                            px-3 py-1 rounded-full text-xs font-medium
+                            ${order.status === 'PAID' ? 'bg-yellow-100 text-yellow-700' : ''}
+                            ${order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' : ''}
+                            ${order.status === 'PREPARING' ? 'bg-blue-100 text-blue-700' : ''}
+                            ${order.status === 'READY' ? 'bg-purple-100 text-purple-700' : ''}
+                            ${order.status === 'SERVED' ? 'bg-green-100 text-green-700' : ''}
+                            ${order.status === 'COMPLETED' ? 'bg-green-500 text-white' : ''}
+                            ${order.status === 'CANCELLED' ? 'bg-red-100 text-red-700' : ''}
+                          `}>
+                            {order.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <select
+                            className="text-sm border border-gray-300 rounded px-2 py-1"
+                            value={order.status}
+                            onChange={(e) => handleOrderStatusChange(order.id, e.target.value)}
+                          >
+                            <option value="PAID">Paid</option>
+                            <option value="PENDING">Pending</option>
+                            <option value="PREPARING">Preparing</option>
+                            <option value="READY">Ready</option>
+                            <option value="SERVED">Served</option>
+                            <option value="COMPLETED">Completed</option>
+                            <option value="CANCELLED">Cancelled</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-gray-500">No orders for this date</p>
+            )}
+          </GlassmorphismCard>
+        )}
       </div>
     </div>
   );

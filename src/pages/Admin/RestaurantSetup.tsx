@@ -31,7 +31,7 @@ export const RestaurantSetup: React.FC = () => {
     zone: 'Indoor',
   });
 
-  const [tables, setTables] = useState<any[]>([]);
+  const [tables, setTables] = useState<(any & { _id?: string })[]>([]);
 
   const handleRestaurantSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +61,7 @@ export const RestaurantSetup: React.FC = () => {
         x: parseFloat(tableData.x),
         y: parseFloat(tableData.y),
         zone: tableData.zone,
+        _id: `temp-${Date.now()}-${Math.random()}`, // Unique temporary ID
       };
       setTables([...tables, newTable]);
       setTableData({ tableNumber: '', seats: '', x: '', y: '', zone: 'Indoor' });
@@ -302,8 +303,8 @@ export const RestaurantSetup: React.FC = () => {
                   </button>
                 </div>
                 <div className="grid grid-cols-4 gap-2">
-                  {tables.map((table, index) => (
-                    <div key={index} className="bg-gray-50 p-3 rounded-lg text-center">
+                  {tables.map((table) => (
+                    <div key={table._id} className="bg-gray-50 p-3 rounded-lg text-center">
                       <div className="font-bold text-roots-green">#{table.tableNumber}</div>
                       <div className="text-sm text-gray-600">{table.seats} seats</div>
                       <div className="text-xs text-gray-500">{table.zone}</div>
